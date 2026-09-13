@@ -1263,8 +1263,7 @@ main(int argc, char *argv[])
 
 	/* find HEAD */
 	if (!git_revparse_single(&obj, repo, "HEAD"))
-		head = git_object_id(obj);
-	git_object_free(obj);
+		head = git_object_id(obj); /* NOTE: do not git_object_free(), it is used below */
 
 	/* use directory name as name */
 	if ((name = strrchr(repodirabs, '/')))
