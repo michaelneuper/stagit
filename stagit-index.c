@@ -15,6 +15,7 @@ static const char *relpath = "";
 static char description[255] = "Repositories";
 static char *name = "";
 static char owner[255];
+static char language[255];
 
 /* Handle read or write errors for a FILE * stream */
 void
@@ -110,7 +111,7 @@ writeheader(FILE *fp)
 	fputs("</span></td></tr><tr><td></td><td>\n"
 		"</td></tr>\n</table>\n<hr/>\n<div id=\"content\">\n"
 		"<table id=\"index\"><thead>\n"
-		"<tr><td><b>Name</b></td><td><b>Description</b></td><td><b>Owner</b></td>"
+		"<tr><td><b>Name</b></td><td><b>Description</b></td><td><b>Language</b></td><td><b>Owner</b></td>"
 		"<td><b>Last commit</b></td></tr>"
 		"</thead><tbody>\n", fp);
 }
@@ -155,6 +156,8 @@ writelog(FILE *fp)
 	xmlencode(fp, stripped_name, strlen(stripped_name));
 	fputs("</a></td><td>", fp);
 	xmlencode(fp, description, strlen(description));
+	fputs("</td><td>", fp);
+	xmlencode(fp, language, strlen(language));
 	fputs("</td><td>", fp);
 	xmlencode(fp, owner, strlen(owner));
 	fputs("</td><td>", fp);
@@ -243,6 +246,21 @@ main(int argc, char *argv[])
 			checkfileerror(fp, "owner", 'r');
 			fclose(fp);
 			owner[strcspn(owner, "\n")] = '\0';
+		}
+
+		/* read language or .git/language */
+		joinpath(path, sizeof(path), repodir, "language");
+		if (!(fp = fopen(path, "r"))) {
+			joinpath(path, sizeof(path), repodir, ".git/language");
+			fp = fopen(path, "r");
+		}
+		language[0] = '\0';
+		if (fp) {
+			if (!fgets(language, sizeof(language), fp))
+				language[0] = '\0';
+			checkfileerror(fp, "language", 'r');
+			fclose(fp);
+			language[strcspn(language, "\n")] = '\0';
 		}
 		writelog(stdout);
 	}

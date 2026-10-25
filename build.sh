@@ -31,17 +31,19 @@ rm -rf "$out"
 mkdir -p "$out"
 copyassets "$out"
 
-# One line per non-empty, public, non-fork repo:
-# name<TAB>default branch<TAB>description
+# One line per non-empty, public, non-fork repo: name, default branch,
+# primary language and description, separated by the ASCII unit separator
+# (read would merge the empty fields between two tabs).
 gh repo list "$user" --visibility public --source --limit 1000 \
-	--json name,defaultBranchRef,description,isEmpty \
+	--json name,defaultBranchRef,primaryLanguage,description,isEmpty \
 	--jq '.[] | select(.isEmpty | not)
-		| [.name, .defaultBranchRef.name, (.description // "" | gsub("\\s+"; " "))]
-		| join("\t")' > "$work/repos.tsv"
+		| [.name, .defaultBranchRef.name, (.primaryLanguage.name // ""),
+		   (.description // "" | gsub("\\s+"; " "))]
+		| join("\u001f")' > "$work/repos.lst"
 
-tab=$(printf '\t')
+us=$(printf '\037')
 : > "$work/index.lst"
-while IFS=$tab read -r name branch desc <&3; do
+while IFS=$us read -r name branch lang desc <&3; do
 	if grep -qxF "$name" "$root/exclude" 2>/dev/null; then
 		continue
 	fi
@@ -63,6 +65,7 @@ while IFS=$tab read -r name branch desc <&3; do
 	# ends up inside <title>.
 	printf '%s' "$desc" > "$repo/description"
 	printf '%s' "$user" > "$repo/owner"
+	printf '%s' "$lang" > "$repo/language"
 	if [ "$serve_git" = 1 ]; then
 		printf '%s' "$site_url$name.git" > "$repo/url"
 	else
@@ -88,7 +91,7 @@ while IFS=$tab read -r name branch desc <&3; do
 	fi
 
 	echo "$(git -C "$repo" log -1 --format=%ct) $repo" >> "$work/index.lst"
-done 3< "$work/repos.tsv"
+done 3< "$work/repos.lst"
 
 # Index page, most recently committed to first.
 sort -rn -o "$work/index.lst" "$work/index.lst"
