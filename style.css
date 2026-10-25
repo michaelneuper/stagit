@@ -166,8 +166,11 @@ h2:first-child {
 
 /* Commits and files. */
 
+/* Tab stops count from the start of the line, so on file pages they line up
+ * because the line number gutter (#blob a.line) is 8ch wide. */
 pre {
 	font: 9pt/1.4 var(--mono);
+	tab-size: 4;
 }
 
 #blob a.line {
