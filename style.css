@@ -34,7 +34,7 @@
 body {
 	margin: 0;
 	padding: 4px 8px;
-	font: 10pt sans-serif;
+	font: 9pt var(--mono);
 	color: var(--fg);
 	background: var(--bg);
 }
@@ -84,10 +84,6 @@ tr.url td {
 	overflow-wrap: anywhere;
 }
 
-tr.url a {
-	font-family: var(--mono);
-}
-
 hr {
 	border: 0;
 	border-top: 1px solid var(--rule);
@@ -132,6 +128,7 @@ body > hr {
 
 #index td:nth-child(2),
 #log td:nth-child(2),
+#files td:nth-child(2),
 #branches td:nth-child(3),
 #tags td:nth-child(3) {
 	width: 100%;
@@ -151,7 +148,6 @@ td.num {
 }
 
 #files td:first-child {
-	font-family: var(--mono);
 	color: var(--muted);
 }
 
@@ -203,9 +199,10 @@ pre a.d {
 
 /* README front page. */
 
+/* Rendered markdown stays proportional; a plain README is a <pre>. */
 #readme {
 	max-width: 60em;
-	line-height: 1.5;
+	font: 10pt/1.5 sans-serif;
 }
 
 #readme h1,
