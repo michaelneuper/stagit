@@ -980,6 +980,26 @@ writereadme(FILE *fp)
 	git_object_free(obj);
 }
 
+/* path with the repository and each parent directory linked to its listing */
+void
+writepath(FILE *fp, const char *path)
+{
+	const char *s, *e;
+
+	fprintf(fp, "<a href=\"%sfiles.html\">", relpath);
+	xmlencode(fp, strippedname, strlen(strippedname));
+	fputs("</a>", fp);
+	for (s = path; (e = strchr(s, '/')); s = e + 1) {
+		fprintf(fp, "/<a href=\"%stree/", relpath);
+		percentencode(fp, path, e - path);
+		fputs(".html\">", fp);
+		xmlencode(fp, s, e - s);
+		fputs("</a>", fp);
+	}
+	putc('/', fp);
+	xmlencode(fp, s, strlen(s));
+}
+
 size_t
 writeblob(git_object *obj, const char *fpath, const char *filename, size_t filesize)
 {
@@ -1004,7 +1024,7 @@ writeblob(git_object *obj, const char *fpath, const char *filename, size_t files
 	fp = efopen(fpath, "w");
 	writeheader(fp, filename);
 	fputs("<p> ", fp);
-	xmlencode(fp, filename, strlen(filename));
+	writepath(fp, filename);
 	fprintf(fp, " (%zuB)", filesize);
 	fputs("</p><hr/>", fp);
 
@@ -1064,21 +1084,120 @@ filemode(git_filemode_t m)
 	return mode;
 }
 
+int writefilestree(FILE *fp, git_tree *tree, const char *path, const char *rel);
+
 int
-writefilestree(FILE *fp, git_tree *tree, const char *path)
+writefilestable(FILE *fp, git_tree *tree, const char *path, const char *rel)
+{
+	int ret;
+
+	fputs("<table id=\"files\"><thead>\n<tr>"
+	      "<td><b>Mode</b></td><td><b>Name</b></td>"
+	      "<td class=\"num\" align=\"right\"><b>Size</b></td>"
+	      "</tr>\n</thead><tbody>\n", fp);
+	ret = writefilestree(fp, tree, path, rel);
+	fputs("</tbody></table>", fp);
+
+	return ret;
+}
+
+/* listing of a directory, written to tree/path.html */
+int
+writetree(git_tree *tree, const char *path)
+{
+	char fpath[PATH_MAX], tmp[PATH_MAX], rel[PATH_MAX] = "", *d;
+	const char *p;
+	FILE *fp;
+	int r, ret;
+
+	r = snprintf(fpath, sizeof(fpath), "tree/%s.html", path);
+	if (r < 0 || (size_t)r >= sizeof(fpath))
+		errx(1, "path truncated: 'tree/%s.html'", path);
+
+	if (strlcpy(tmp, fpath, sizeof(tmp)) >= sizeof(tmp))
+		errx(1, "path truncated: '%s'", fpath);
+	if (!(d = dirname(tmp)))
+		err(1, "dirname");
+	if (mkdirp(d))
+		return -1;
+
+	for (p = fpath; *p; p++) {
+		if (*p == '/' && strlcat(rel, "../", sizeof(rel)) >= sizeof(rel))
+			errx(1, "path truncated: '../%s'", rel);
+	}
+	relpath = rel;
+
+	fp = efopen(fpath, "w");
+	writeheader(fp, path);
+	fputs("<p> ", fp);
+	writepath(fp, path);
+	fputs("/</p><hr/>", fp);
+	relpath = "";
+	ret = writefilestable(fp, tree, path, rel);
+	writefooter(fp);
+	checkfileerror(fp, fpath, 'w');
+	fclose(fp);
+
+	return ret;
+}
+
+/* rows for the entries of a directory, with links relative to rel */
+int
+writefilestree(FILE *fp, git_tree *tree, const char *path, const char *rel)
 {
 	const git_tree_entry *entry = NULL;
 	git_object *obj = NULL;
-	const char *entryname;
+	const char *entryname, *p;
 	char filepath[PATH_MAX], entrypath[PATH_MAX], oid[8];
 	size_t count, i, lc, filesize;
 	int r, ret;
 
+	if (path[0]) {
+		fprintf(fp, "<tr><td></td><td><a href=\"%s", rel);
+		if ((p = strrchr(path, '/'))) {
+			fputs("tree/", fp);
+			percentencode(fp, path, p - path);
+			fputs(".html", fp);
+		} else {
+			fputs("files.html", fp);
+		}
+		fputs("\">..</a></td><td class=\"num\" align=\"right\"></td></tr>\n", fp);
+	}
+
 	count = git_tree_entrycount(tree);
+
+	/* directories first */
 	for (i = 0; i < count; i++) {
 		if (!(entry = git_tree_entry_byindex(tree, i)) ||
 		    !(entryname = git_tree_entry_name(entry)))
 			return -1;
+		if (git_tree_entry_type(entry) != GIT_OBJ_TREE)
+			continue;
+		joinpath(entrypath, sizeof(entrypath), path, entryname);
+
+		if (git_tree_entry_to_object(&obj, repo, entry))
+			return -1;
+		/* NOTE: recurses */
+		ret = writetree((git_tree *)obj, entrypath);
+		git_object_free(obj);
+		if (ret)
+			return ret;
+
+		fputs("<tr><td>", fp);
+		fputs(filemode(git_tree_entry_filemode(entry)), fp);
+		fprintf(fp, "</td><td><a href=\"%stree/", rel);
+		percentencode(fp, entrypath, strlen(entrypath));
+		fputs(".html\">", fp);
+		xmlencode(fp, entryname, strlen(entryname));
+		fputs("/</a></td><td class=\"num\" align=\"right\"></td></tr>\n", fp);
+	}
+
+	for (i = 0; i < count; i++) {
+		if (!(entry = git_tree_entry_byindex(tree, i)) ||
+		    !(entryname = git_tree_entry_name(entry)))
+			return -1;
+		if (git_tree_entry_type(entry) == GIT_OBJ_TREE)
+			continue;
 		joinpath(entrypath, sizeof(entrypath), path, entryname);
 
 		r = snprintf(filepath, sizeof(filepath), "file/%s.html",
@@ -1090,28 +1209,20 @@ writefilestree(FILE *fp, git_tree *tree, const char *path)
 			switch (git_object_type(obj)) {
 			case GIT_OBJ_BLOB:
 				break;
-			case GIT_OBJ_TREE:
-				/* NOTE: recurses */
-				ret = writefilestree(fp, (git_tree *)obj,
-				                     entrypath);
-				git_object_free(obj);
-				if (ret)
-					return ret;
-				continue;
 			default:
 				git_object_free(obj);
 				continue;
 			}
 
 			filesize = git_blob_rawsize((git_blob *)obj);
-			lc = writeblob(obj, filepath, entryname, filesize);
+			lc = writeblob(obj, filepath, entrypath, filesize);
 
 			fputs("<tr><td>", fp);
 			fputs(filemode(git_tree_entry_filemode(entry)), fp);
-			fprintf(fp, "</td><td><a href=\"%s", relpath);
+			fprintf(fp, "</td><td><a href=\"%s", rel);
 			percentencode(fp, filepath, strlen(filepath));
 			fputs("\">", fp);
-			xmlencode(fp, entrypath, strlen(entrypath));
+			xmlencode(fp, entryname, strlen(entryname));
 			fputs("</a></td><td class=\"num\" align=\"right\">", fp);
 			if (lc > 0)
 				fprintf(fp, "%zuL", lc);
@@ -1122,8 +1233,8 @@ writefilestree(FILE *fp, git_tree *tree, const char *path)
 		} else if (git_tree_entry_type(entry) == GIT_OBJ_COMMIT) {
 			/* commit object in tree is a submodule */
 			fprintf(fp, "<tr><td>m---------</td><td><a href=\"%sfile/.gitmodules.html\">",
-				relpath);
-			xmlencode(fp, entrypath, strlen(entrypath));
+				rel);
+			xmlencode(fp, entryname, strlen(entryname));
 			fputs("</a> @ ", fp);
 			git_oid_tostr(oid, sizeof(oid), git_tree_entry_id(entry));
 			xmlencode(fp, oid, strlen(oid));
@@ -1141,16 +1252,9 @@ writefiles(FILE *fp, const git_oid *id)
 	git_commit *commit = NULL;
 	int ret = -1;
 
-	fputs("<table id=\"files\"><thead>\n<tr>"
-	      "<td><b>Mode</b></td><td><b>Name</b></td>"
-	      "<td class=\"num\" align=\"right\"><b>Size</b></td>"
-	      "</tr>\n</thead><tbody>\n", fp);
-
 	if (!git_commit_lookup(&commit, repo, id) &&
 	    !git_commit_tree(&tree, commit))
-		ret = writefilestree(fp, tree, "");
-
-	fputs("</tbody></table>", fp);
+		ret = writefilestable(fp, tree, "", "");
 
 	git_commit_free(commit);
 	git_tree_free(tree);

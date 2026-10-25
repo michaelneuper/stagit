@@ -12,6 +12,9 @@ mirror of my public GitHub repos. The upstream README is in `README`.
   log.
 - stagit-index links to each repo's front page instead of its log.
 - The menu reads README | Files | Log | Refs.
+- Files are browsed by directory: `files.html` lists the top level, each
+  directory gets a page at `tree/<path>.html`, and file and directory pages
+  start with a linked path.
 - cgit-flavoured `style.css`, and my own logo and favicon.
 - The Makefile also finds libraries installed by Homebrew.
 
