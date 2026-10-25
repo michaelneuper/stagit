@@ -1,0 +1,47 @@
+name: mirror
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install libgit2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgit2-dev
+
+      - name: Build stagit
+        run: make
+
+      - name: Generate site
+        run: ./build.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_USER: ${{ github.repository_owner }}
+          SITE_URL: https://git.michaelneuper.com/
+
+      # netlify-cli needs Node 22.13 or newer.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Deploy to Netlify
+        run: npx --yes netlify-cli@27.12.0 deploy --prod --no-build --dir public
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
