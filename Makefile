@@ -8,8 +8,9 @@ PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/man
 DOCPREFIX = ${PREFIX}/share/doc/${NAME}
 
-LIBGIT_INC = -I/usr/local/include
-LIBGIT_LIB = -L/usr/local/lib -lgit2
+# /opt/homebrew is Homebrew on Apple silicon.
+LIBGIT_INC = -I/usr/local/include -I/opt/homebrew/include
+LIBGIT_LIB = -L/usr/local/lib -L/opt/homebrew/lib -lgit2
 
 # use system flags.
 STAGIT_CFLAGS = ${LIBGIT_INC} ${CFLAGS}

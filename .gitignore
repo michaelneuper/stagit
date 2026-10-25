@@ -1,0 +1,6 @@
+*.o
+/stagit
+/stagit-index
+/work/
+/public/
+/.netlify/
