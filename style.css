@@ -79,6 +79,10 @@ h1 {
 	color: var(--fg);
 }
 
+.subtitle {
+	color: var(--muted);
+}
+
 tr.url td {
 	color: var(--muted);
 	overflow-wrap: anywhere;

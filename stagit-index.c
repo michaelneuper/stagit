@@ -16,6 +16,7 @@ static char description[255] = "Repositories";
 static char *name = "";
 static char owner[255];
 static char language[255];
+static const char *subtitle = ""; /* HTML shown under the title, -s */
 
 /* Handle read or write errors for a FILE * stream */
 void
@@ -108,8 +109,10 @@ writeheader(FILE *fp)
 	fprintf(fp, "<table>\n<tr><td><img src=\"%slogo.png\" alt=\"\" width=\"32\" height=\"32\" /></td>\n"
 	        "<td><span class=\"desc\">", relpath);
 	xmlencode(fp, description, strlen(description));
-	fputs("</span></td></tr><tr><td></td><td>\n"
-		"</td></tr>\n</table>\n<hr/>\n<div id=\"content\">\n"
+	fputs("</span></td></tr><tr><td></td><td>\n", fp);
+	if (subtitle[0])
+		fprintf(fp, "<span class=\"subtitle\">%s</span>\n", subtitle);
+	fputs("</td></tr>\n</table>\n<hr/>\n<div id=\"content\">\n"
 		"<table id=\"index\"><thead>\n"
 		"<tr><td><b>Name</b></td><td><b>Description</b></td><td><b>Language</b></td><td><b>Owner</b></td>"
 		"<td><b>Last commit</b></td></tr>"
@@ -179,10 +182,14 @@ main(int argc, char *argv[])
 	FILE *fp;
 	char path[PATH_MAX], repodirabs[PATH_MAX + 1];
 	const char *repodir;
-	int i, ret = 0;
+	int i, first = 1, ret = 0;
 
-	if (argc < 2) {
-		fprintf(stderr, "usage: %s [repodir...]\n", argv[0]);
+	if (argc > 2 && !strcmp(argv[1], "-s")) {
+		subtitle = argv[2];
+		first = 3;
+	}
+	if (argc <= first || argv[first][0] == '-') {
+		fprintf(stderr, "usage: %s [-s subtitle] [repodir...]\n", argv[0]);
 		return 1;
 	}
 
@@ -201,7 +208,7 @@ main(int argc, char *argv[])
 
 	writeheader(stdout);
 
-	for (i = 1; i < argc; i++) {
+	for (i = first; i < argc; i++) {
 		repodir = argv[i];
 		if (!realpath(repodir, repodirabs))
 			err(1, "realpath");

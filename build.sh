@@ -99,4 +99,6 @@ set --
 while read -r _ repo; do
 	set -- "$@" "$repo"
 done < "$work/index.lst"
-"$root/stagit-index" "$@" > "$out/index.html"
+"$root/stagit-index" \
+	-s "Read-only mirror of my public repositories on <a href=\"https://github.com/$user\">GitHub</a>." \
+	"$@" > "$out/index.html"

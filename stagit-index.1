@@ -6,6 +6,7 @@
 .Nd static git index page generator
 .Sh SYNOPSIS
 .Nm
+.Op Fl s Ar subtitle
 .Op Ar repodir...
 .Sh DESCRIPTION
 .Nm
@@ -14,6 +15,13 @@ the HTML data to stdout.
 The repos in the index are in the same order as the arguments
 .Ar repodir
 specified.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl s Ar subtitle
+HTML shown under the title of the page.
+It is written as is, not escaped.
+.El
 .Pp
 The basename of the directory is used as the repository name.
 The suffix ".git" is removed from the basename, this suffix is commonly used
