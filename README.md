@@ -90,5 +90,7 @@ Merge rather than rebase, so `main` never needs a force push. Conflicts in
   existing commit page, so incremental output would go stale after a force
   push or a description change. Netlify only uploads files whose contents
   changed, so redeploys stay small.
-- Relative image links in READMEs don't work, because stagit only publishes
-  HTML views of files, not the files themselves.
+- Relative links and images in a README resolve from the repo root, like on
+  GitHub. Links to text files go to their file page and links to directories
+  to their listing. Images and other binary files are copied to
+  `raw/<path>` and linked there.

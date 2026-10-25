@@ -1,6 +1,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <ctype.h>
 #include <err.h>
 #include <errno.h>
 #include <libgen.h>
@@ -984,13 +985,172 @@ writemarkdown(const MD_CHAR *s, MD_SIZE len, void *fp)
 	fwrite(s, 1, len, fp);
 }
 
+/* If url is a path in the repository, resolved from the root the way GitHub
+ * does for a README, write the URL of the page for it instead: the listing
+ * for a directory and the file page for a text file. Images and other binary
+ * files are copied to raw/ and linked there. Returns 0 for anything else,
+ * such as an absolute URL. */
+int
+writereadmeurl(FILE *fp, const char *url, size_t len, int img)
+{
+	git_object *obj = NULL;
+	char path[PATH_MAX], spec[PATH_MAX], out[PATH_MAX], fpath[PATH_MAX];
+	char tmp[PATH_MAX], hex[3] = "", *d;
+	const char *s;
+	size_t i, j;
+	FILE *rawfp;
+	int r;
+
+	/* absolute URLs have a scheme or start with // */
+	for (i = 0; i < len && !strchr("/?#", url[i]); i++)
+		if (url[i] == ':')
+			return 0;
+	if (!len || url[0] == '#' || url[0] == '?' ||
+	    (len > 1 && url[0] == '/' && url[1] == '/'))
+		return 0;
+
+	/* decode the path, without a query string or fragment */
+	for (i = 0, j = 0; i < len && url[i] != '?' && url[i] != '#'; i++) {
+		if (j + 1 >= sizeof(path))
+			return 0;
+		if (url[i] == '%' && i + 2 < len &&
+		    isxdigit((unsigned char)url[i + 1]) &&
+		    isxdigit((unsigned char)url[i + 2])) {
+			hex[0] = url[i + 1];
+			hex[1] = url[i + 2];
+			path[j++] = strtol(hex, NULL, 16);
+			i += 2;
+		} else if (i + 5 <= len && !strncmp(&url[i], "&amp;", 5)) {
+			path[j++] = '&';
+			i += 4;
+		} else {
+			path[j++] = url[i];
+		}
+	}
+	while (j > 0 && path[j - 1] == '/')
+		j--;
+	path[j] = '\0';
+
+	/* "/dir/file" and "./dir/file" mean "dir/file" */
+	for (s = path; *s == '/' || !strncmp(s, "./", 2); s += (*s == '/') ? 1 : 2)
+		;
+	/* never write outside raw/ */
+	j = strlen(s);
+	if (!strcmp(s, "..") || !strncmp(s, "../", 3) || strstr(s, "/../") ||
+	    (j >= 3 && !strcmp(s + j - 3, "/..")))
+		return 0;
+
+	/* the repository root */
+	if (!*s || !strcmp(s, ".")) {
+		if (img)
+			return 0;
+		fputs("files.html", fp);
+		return 1;
+	}
+
+	r = snprintf(spec, sizeof(spec), "HEAD:%s", s);
+	if (r < 0 || (size_t)r >= sizeof(spec) ||
+	    git_revparse_single(&obj, repo, spec)) {
+		git_object_free(obj);
+		return 0;
+	}
+	outpath(out, sizeof(out), s, strlen(s));
+
+	switch (git_object_type(obj)) {
+	case GIT_OBJ_TREE:
+		if (img)
+			break;
+		fputs("tree/", fp);
+		percentencode(fp, out, strlen(out));
+		fputs(".html", fp);
+		git_object_free(obj);
+		return 1;
+	case GIT_OBJ_BLOB:
+		if (!img && !git_blob_is_binary((git_blob *)obj)) {
+			fputs("file/", fp);
+			percentencode(fp, out, strlen(out));
+			fputs(".html", fp);
+			git_object_free(obj);
+			return 1;
+		}
+
+		r = snprintf(fpath, sizeof(fpath), "raw/%s", out);
+		if (r < 0 || (size_t)r >= sizeof(fpath))
+			errx(1, "path truncated: 'raw/%s'", out);
+		if (strlcpy(tmp, fpath, sizeof(tmp)) >= sizeof(tmp))
+			errx(1, "path truncated: '%s'", fpath);
+		if (!(d = dirname(tmp)))
+			err(1, "dirname");
+		if (mkdirp(d))
+			break;
+
+		rawfp = efopen(fpath, "w");
+		fwrite(git_blob_rawcontent((git_blob *)obj), 1,
+		       git_blob_rawsize((git_blob *)obj), rawfp);
+		checkfileerror(rawfp, fpath, 'w');
+		fclose(rawfp);
+
+		fputs("raw/", fp);
+		percentencode(fp, out, strlen(out));
+		git_object_free(obj);
+		return 1;
+	default:
+		break;
+	}
+
+	git_object_free(obj);
+	return 0;
+}
+
+/* rendered README, with links and image sources that are paths in the
+ * repository pointing at the pages or copies for them */
+void
+writereadmehtml(FILE *fp, const char *s)
+{
+	const char *tag, *end, *attr, *a, *url, *q;
+	size_t n;
+	int img;
+
+	while ((tag = strchr(s, '<')) && (end = strchr(tag, '>'))) {
+		img = !strncmp(tag, "<img", 4) && isspace((unsigned char)tag[4]);
+		if (img)
+			attr = "src=";
+		else if (!strncmp(tag, "<a", 2) && isspace((unsigned char)tag[2]))
+			attr = "href=";
+		else
+			attr = NULL;
+
+		n = attr ? strlen(attr) : 0;
+		for (a = tag + 1; attr && a < end; a++) {
+			if (isspace((unsigned char)a[-1]) && !strncmp(a, attr, n) &&
+			    (a[n] == '"' || a[n] == '\''))
+				break;
+		}
+		if (!attr || a >= end) {
+			fwrite(s, 1, end - s, fp);
+			s = end;
+			continue;
+		}
+
+		url = a + n + 1;
+		if (!(q = strchr(url, a[n])))
+			break;
+		fwrite(s, 1, url - s, fp);
+		if (!writereadmeurl(fp, url, q - url, img))
+			fwrite(url, 1, q - url, fp);
+		s = q;
+	}
+	fputs(s, fp);
+}
+
 void
 writereadme(FILE *fp)
 {
 	git_object *obj = NULL;
-	char spec[PATH_MAX];
+	char spec[PATH_MAX], *html = NULL;
 	const char *s, *ext;
-	size_t len;
+	size_t len, htmllen;
+	FILE *htmlfp;
 
 	snprintf(spec, sizeof(spec), "HEAD:%s", readme);
 	if (git_revparse_single(&obj, repo, spec))
@@ -1000,8 +1160,15 @@ writereadme(FILE *fp)
 
 	fputs("<div id=\"readme\">\n", fp);
 	if ((ext = strrchr(readme, '.')) && !strcmp(ext, ".md")) {
-		if (md_html(s, len, writemarkdown, fp, MD_DIALECT_GITHUB, 0))
+		/* render to memory first, to rewrite image sources */
+		if (!(htmlfp = open_memstream(&html, &htmllen)))
+			err(1, "open_memstream");
+		if (md_html(s, len, writemarkdown, htmlfp, MD_DIALECT_GITHUB, 0))
 			errx(1, "md_html: '%s'", readme);
+		if (fclose(htmlfp))
+			err(1, "fclose: '%s'", readme);
+		writereadmehtml(fp, html);
+		free(html);
 	} else {
 		fputs("<pre>", fp);
 		xmlencode(fp, s, len);
