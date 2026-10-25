@@ -538,8 +538,8 @@ writeheader(FILE *fp, const char *title)
 	fputs("<tr><td></td><td>\n", fp);
 	if (readme)
 		fprintf(fp, "<a href=\"%sindex.html\">README</a> | ", relpath);
-	fprintf(fp, "<a href=\"%slog.html\">Log</a> | ", relpath);
 	fprintf(fp, "<a href=\"%sfiles.html\">Files</a> | ", relpath);
+	fprintf(fp, "<a href=\"%slog.html\">Log</a> | ", relpath);
 	fprintf(fp, "<a href=\"%srefs.html\">Refs</a>", relpath);
 	if (submodules)
 		fprintf(fp, " | <a href=\"%sfile/%s.html\">Submodules</a>",
