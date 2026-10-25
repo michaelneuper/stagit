@@ -26,8 +26,9 @@ To see only the code changes: `git diff 1.3 -- '*.c' Makefile`.
 
 ## Building the site
 
-Needs libgit2, md4c, pandoc and the GitHub CLI
-(`brew install libgit2 md4c pandoc gh`).
+Needs libgit2, md4c, pandoc, chroma and the GitHub CLI
+(`brew install libgit2 md4c pandoc chroma gh`). Without chroma, file pages
+aren't syntax highlighted.
 
     ./build.sh
     python3 -m http.server -d public

@@ -299,3 +299,148 @@ pre a.d {
 #readme .task-list-item {
 	list-style: none;
 }
+
+/*
+ * Syntax highlighting on file pages. Generated with
+ * `chroma --html-styles --style=github` (github-dark for dark mode),
+ * without the background and line number rules, and with .chroma
+ * replaced by #blob. Each theme sits in its own media query, so a token
+ * one theme leaves unstyled doesn't keep the other theme's colour.
+ */
+
+@media (prefers-color-scheme: light) {
+	#blob .k { color: #cf222e }
+	#blob .kc { color: #cf222e }
+	#blob .kd { color: #cf222e }
+	#blob .kn { color: #cf222e }
+	#blob .kp { color: #cf222e }
+	#blob .kr { color: #cf222e }
+	#blob .kt { color: #cf222e }
+	#blob .na { color: #1f2328 }
+	#blob .nc { color: #1f2328 }
+	#blob .no { color: #0550ae }
+	#blob .nd { color: #0550ae }
+	#blob .ni { color: #6639ba }
+	#blob .nl { color: #990000; font-weight: bold }
+	#blob .nn { color: #24292e }
+	#blob .nx { color: #1f2328 }
+	#blob .nt { color: #0550ae }
+	#blob .nb { color: #6639ba }
+	#blob .bp { color: #6a737d }
+	#blob .nv { color: #953800 }
+	#blob .vc { color: #953800 }
+	#blob .vg { color: #953800 }
+	#blob .vi { color: #953800 }
+	#blob .vm { color: #953800 }
+	#blob .nf { color: #6639ba }
+	#blob .fm { color: #6639ba }
+	#blob .s { color: #0a3069 }
+	#blob .sa { color: #0a3069 }
+	#blob .sb { color: #0a3069 }
+	#blob .sc { color: #0a3069 }
+	#blob .dl { color: #0a3069 }
+	#blob .sd { color: #0a3069 }
+	#blob .s2 { color: #0a3069 }
+	#blob .se { color: #0a3069 }
+	#blob .sh { color: #0a3069 }
+	#blob .si { color: #0a3069 }
+	#blob .sx { color: #0a3069 }
+	#blob .sr { color: #0a3069 }
+	#blob .s1 { color: #0a3069 }
+	#blob .ss { color: #032f62 }
+	#blob .m { color: #0550ae }
+	#blob .mb { color: #0550ae }
+	#blob .mf { color: #0550ae }
+	#blob .mh { color: #0550ae }
+	#blob .mi { color: #0550ae }
+	#blob .il { color: #0550ae }
+	#blob .mo { color: #0550ae }
+	#blob .o { color: #0550ae }
+	#blob .ow { color: #0550ae }
+	#blob .or { color: #0550ae }
+	#blob .p { color: #1f2328 }
+	#blob .c { color: #57606a }
+	#blob .ch { color: #57606a }
+	#blob .cm { color: #57606a }
+	#blob .c1 { color: #57606a }
+	#blob .cs { color: #57606a }
+	#blob .cp { color: #57606a }
+	#blob .cpf { color: #57606a }
+	#blob .gd { color: #82071e; background-color: #ffebe9 }
+	#blob .ge { color: #1f2328 }
+	#blob .gi { color: #116329; background-color: #dafbe1 }
+	#blob .go { color: #1f2328 }
+	#blob .gl { text-decoration: underline }
+	#blob .w { color: #ffffff }
+}
+
+@media (prefers-color-scheme: dark) {
+	#blob .k { color: #ff7b72 }
+	#blob .kc { color: #79c0ff }
+	#blob .kd { color: #ff7b72 }
+	#blob .kn { color: #ff7b72 }
+	#blob .kp { color: #79c0ff }
+	#blob .kr { color: #ff7b72 }
+	#blob .kt { color: #ff7b72 }
+	#blob .nc { color: #f0883e; font-weight: bold }
+	#blob .no { color: #79c0ff; font-weight: bold }
+	#blob .nd { color: #d2a8ff; font-weight: bold }
+	#blob .ni { color: #ffa657 }
+	#blob .ne { color: #f0883e; font-weight: bold }
+	#blob .nl { color: #79c0ff; font-weight: bold }
+	#blob .nn { color: #ff7b72 }
+	#blob .py { color: #79c0ff }
+	#blob .nt { color: #7ee787 }
+	#blob .nv { color: #79c0ff }
+	#blob .vc { color: #79c0ff }
+	#blob .vg { color: #79c0ff }
+	#blob .vi { color: #79c0ff }
+	#blob .vm { color: #79c0ff }
+	#blob .nf { color: #d2a8ff; font-weight: bold }
+	#blob .fm { color: #d2a8ff; font-weight: bold }
+	#blob .l { color: #a5d6ff }
+	#blob .ld { color: #79c0ff }
+	#blob .s { color: #a5d6ff }
+	#blob .sa { color: #79c0ff }
+	#blob .sb { color: #a5d6ff }
+	#blob .sc { color: #a5d6ff }
+	#blob .dl { color: #79c0ff }
+	#blob .sd { color: #a5d6ff }
+	#blob .s2 { color: #a5d6ff }
+	#blob .se { color: #79c0ff }
+	#blob .sh { color: #79c0ff }
+	#blob .si { color: #a5d6ff }
+	#blob .sx { color: #a5d6ff }
+	#blob .sr { color: #79c0ff }
+	#blob .s1 { color: #a5d6ff }
+	#blob .ss { color: #a5d6ff }
+	#blob .m { color: #a5d6ff }
+	#blob .mb { color: #a5d6ff }
+	#blob .mf { color: #a5d6ff }
+	#blob .mh { color: #a5d6ff }
+	#blob .mi { color: #a5d6ff }
+	#blob .il { color: #a5d6ff }
+	#blob .mo { color: #a5d6ff }
+	#blob .o { color: #ff7b72; font-weight: bold }
+	#blob .ow { color: #ff7b72; font-weight: bold }
+	#blob .or { color: #ff7b72; font-weight: bold }
+	#blob .c { color: #8b949e; font-style: italic }
+	#blob .ch { color: #8b949e; font-style: italic }
+	#blob .cm { color: #8b949e; font-style: italic }
+	#blob .c1 { color: #8b949e; font-style: italic }
+	#blob .cs { color: #8b949e; font-weight: bold; font-style: italic }
+	#blob .cp { color: #8b949e; font-weight: bold; font-style: italic }
+	#blob .cpf { color: #8b949e; font-weight: bold; font-style: italic }
+	#blob .gd { color: #ffa198; background-color: #490202 }
+	#blob .ge { font-style: italic }
+	#blob .gr { color: #ffa198 }
+	#blob .gh { color: #79c0ff; font-weight: bold }
+	#blob .gi { color: #56d364; background-color: #0f5323 }
+	#blob .go { color: #8b949e }
+	#blob .gp { color: #8b949e }
+	#blob .gs { font-weight: bold }
+	#blob .gu { color: #79c0ff }
+	#blob .gt { color: #ff7b72 }
+	#blob .gl { text-decoration: underline }
+	#blob .w { color: #6e7681 }
+}

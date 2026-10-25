@@ -1,5 +1,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 #include <ctype.h>
 #include <err.h>
@@ -589,17 +590,107 @@ writefooter(FILE *fp)
 }
 
 size_t
-writeblobhtml(FILE *fp, const git_blob *blob)
+countlines(const char *s, size_t len)
+{
+	size_t i, n = 0;
+
+	for (i = 0; i < len; i++)
+		if (s[i] == '\n')
+			n++;
+
+	return n + (len > 0 && s[len - 1] != '\n');
+}
+
+/* source highlighted by chroma, with the spans of each line closed on that
+ * line, or NULL if chroma doesn't know the language or isn't installed */
+char *
+highlight(const char *s, size_t len, const char *filename)
+{
+	static int nochroma;
+	char tmppath[] = "/tmp/stagit.XXXXXX", cmd[256], buf[BUFSIZ];
+	char *html = NULL, *p;
+	size_t n, htmllen;
+	FILE *tmpfp, *pp, *htmlfp;
+	int fd, status;
+
+	if (nochroma)
+		return NULL;
+
+	if ((fd = mkstemp(tmppath)) < 0)
+		err(1, "mkstemp");
+	if (!(tmpfp = fdopen(fd, "w")))
+		err(1, "fdopen: '%s'", tmppath);
+	fwrite(s, 1, len, tmpfp);
+	checkfileerror(tmpfp, tmppath, 'w');
+	fclose(tmpfp);
+
+	/* the filename picks the lexer; passing it through the environment
+	 * keeps the shell from interpreting it */
+	if (setenv("STAGIT_FILENAME", filename, 1))
+		err(1, "setenv");
+	snprintf(cmd, sizeof(cmd),
+	         "chroma --html --html-only --html-prevent-surrounding-pre --fail "
+	         "--filename=\"$STAGIT_FILENAME\" < '%s' 2>/dev/null", tmppath);
+	if (!(pp = popen(cmd, "r")))
+		err(1, "popen");
+	if (!(htmlfp = open_memstream(&html, &htmllen)))
+		err(1, "open_memstream");
+	while ((n = fread(buf, 1, sizeof(buf), pp)) > 0)
+		fwrite(buf, 1, n, htmlfp);
+	status = pclose(pp);
+	if (fclose(htmlfp))
+		err(1, "fclose: '%s'", filename);
+	unlink(tmppath);
+
+	if (WIFEXITED(status) && WEXITSTATUS(status) == 127) {
+		warnx("chroma not found, files are not highlighted");
+		nochroma = 1;
+	}
+	if (status) {
+		free(html);
+		return NULL;
+	}
+
+	/* chroma ends a span at each newline, but closes it after the newline */
+	for (p = html; (p = strstr(p, "\n</span>")); p += strlen("</span>\n"))
+		memcpy(p, "</span>\n", strlen("</span>\n"));
+
+	return html;
+}
+
+size_t
+writeblobhtml(FILE *fp, const git_blob *blob, const char *filename)
 {
 	size_t n = 0, i, len, prev;
 	/* style.css draws the number from data-n, so it isn't copied with the code */
 	const char *nfmt = "<a href=\"#l%zu\" class=\"line\" id=\"l%zu\" data-n=\"%zu\"></a>";
-	const char *s = git_blob_rawcontent(blob);
+	const char *s = git_blob_rawcontent(blob), *p, *e, *q;
+	char *html = NULL;
 
 	len = git_blob_rawsize(blob);
 	fputs("<pre id=\"blob\">\n", fp);
 
-	if (len > 0) {
+	/* only use the highlighted lines if they line up with the file */
+	if (len > 0 && (html = highlight(s, len, filename)) &&
+	    countlines(html, strlen(html)) != countlines(s, len)) {
+		free(html);
+		html = NULL;
+	}
+
+	if (html) {
+		for (p = html; *p; p = *e ? e + 1 : e) {
+			if (!(e = strchr(p, '\n')))
+				e = p + strlen(p);
+			n++;
+			fprintf(fp, nfmt, n, n, n);
+			for (q = p; q < e; q++)
+				if (*q != '\r')
+					putc(*q, fp);
+			if (*e)
+				putc('\n', fp);
+		}
+		free(html);
+	} else if (len > 0) {
 		for (i = 0, prev = 0; i < len; i++) {
 			if (s[i] != '\n')
 				continue;
@@ -1291,7 +1382,7 @@ writeblob(git_object *obj, const char *fpath, const char *filename, size_t files
 	if (git_blob_is_binary((git_blob *)obj))
 		fputs("<p>Binary file.</p>\n", fp);
 	else
-		lc = writeblobhtml(fp, (git_blob *)obj);
+		lc = writeblobhtml(fp, (git_blob *)obj, filename);
 
 	writefooter(fp);
 	checkfileerror(fp, fpath, 'w');
