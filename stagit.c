@@ -392,6 +392,35 @@ percentencode(FILE *fp, const char *s, size_t len)
 	}
 }
 
+/* Static hosts like Netlify skip files and directories whose name starts
+ * with a dot, so in output paths such components get a '_' prefix. */
+void
+outpath(char *buf, size_t bufsiz, const char *path, size_t len)
+{
+	size_t i, j;
+
+	for (i = 0, j = 0; i < len && path[i]; i++) {
+		if (path[i] == '.' && (i == 0 || path[i - 1] == '/')) {
+			if (j + 1 >= bufsiz)
+				errx(1, "path truncated: '%s'", path);
+			buf[j++] = '_';
+		}
+		if (j + 1 >= bufsiz)
+			errx(1, "path truncated: '%s'", path);
+		buf[j++] = path[i];
+	}
+	buf[j] = '\0';
+}
+
+void
+percentencodepath(FILE *fp, const char *s, size_t len)
+{
+	char buf[PATH_MAX];
+
+	outpath(buf, sizeof(buf), s, len);
+	percentencode(fp, buf, strlen(buf));
+}
+
 /* Escape characters below as HTML 2.0 / XML 1.0. */
 void
 xmlencode(FILE *fp, const char *s, size_t len)
@@ -541,9 +570,11 @@ writeheader(FILE *fp, const char *title)
 	fprintf(fp, "<a href=\"%sfiles.html\">Files</a> | ", relpath);
 	fprintf(fp, "<a href=\"%slog.html\">Log</a> | ", relpath);
 	fprintf(fp, "<a href=\"%srefs.html\">Refs</a>", relpath);
-	if (submodules)
-		fprintf(fp, " | <a href=\"%sfile/%s.html\">Submodules</a>",
-		        relpath, submodules);
+	if (submodules) {
+		fprintf(fp, " | <a href=\"%sfile/", relpath);
+		percentencodepath(fp, submodules, strlen(submodules));
+		fputs(".html\">Submodules</a>", fp);
+	}
 	if (license)
 		fprintf(fp, " | <a href=\"%sfile/%s.html\">LICENSE</a>",
 		        relpath, license);
@@ -698,11 +729,11 @@ printshowfile(FILE *fp, struct commitinfo *ci)
 		patch = ci->deltas[i]->patch;
 		delta = git_patch_get_delta(patch);
 		fprintf(fp, "<b>diff --git a/<a id=\"h%zu\" href=\"%sfile/", i, relpath);
-		percentencode(fp, delta->old_file.path, strlen(delta->old_file.path));
+		percentencodepath(fp, delta->old_file.path, strlen(delta->old_file.path));
 		fputs(".html\">", fp);
 		xmlencode(fp, delta->old_file.path, strlen(delta->old_file.path));
 		fprintf(fp, "</a> b/<a href=\"%sfile/", relpath);
-		percentencode(fp, delta->new_file.path, strlen(delta->new_file.path));
+		percentencodepath(fp, delta->new_file.path, strlen(delta->new_file.path));
 		fprintf(fp, ".html\">");
 		xmlencode(fp, delta->new_file.path, strlen(delta->new_file.path));
 		fprintf(fp, "</a></b>\n");
@@ -991,7 +1022,7 @@ writepath(FILE *fp, const char *path)
 	fputs("</a>", fp);
 	for (s = path; (e = strchr(s, '/')); s = e + 1) {
 		fprintf(fp, "/<a href=\"%stree/", relpath);
-		percentencode(fp, path, e - path);
+		percentencodepath(fp, path, e - path);
 		fputs(".html\">", fp);
 		xmlencode(fp, s, e - s);
 		fputs("</a>", fp);
@@ -1110,9 +1141,10 @@ writetree(git_tree *tree, const char *path)
 	FILE *fp;
 	int r, ret;
 
-	r = snprintf(fpath, sizeof(fpath), "tree/%s.html", path);
+	outpath(tmp, sizeof(tmp), path, strlen(path));
+	r = snprintf(fpath, sizeof(fpath), "tree/%s.html", tmp);
 	if (r < 0 || (size_t)r >= sizeof(fpath))
-		errx(1, "path truncated: 'tree/%s.html'", path);
+		errx(1, "path truncated: 'tree/%s.html'", tmp);
 
 	if (strlcpy(tmp, fpath, sizeof(tmp)) >= sizeof(tmp))
 		errx(1, "path truncated: '%s'", fpath);
@@ -1148,7 +1180,7 @@ writefilestree(FILE *fp, git_tree *tree, const char *path, const char *rel)
 	const git_tree_entry *entry = NULL;
 	git_object *obj = NULL;
 	const char *entryname, *p;
-	char filepath[PATH_MAX], entrypath[PATH_MAX], oid[8];
+	char filepath[PATH_MAX], entrypath[PATH_MAX], tmp[PATH_MAX], oid[8];
 	size_t count, i, lc, filesize;
 	int r, ret;
 
@@ -1156,7 +1188,7 @@ writefilestree(FILE *fp, git_tree *tree, const char *path, const char *rel)
 		fprintf(fp, "<tr><td></td><td><a href=\"%s", rel);
 		if ((p = strrchr(path, '/'))) {
 			fputs("tree/", fp);
-			percentencode(fp, path, p - path);
+			percentencodepath(fp, path, p - path);
 			fputs(".html", fp);
 		} else {
 			fputs("files.html", fp);
@@ -1186,7 +1218,7 @@ writefilestree(FILE *fp, git_tree *tree, const char *path, const char *rel)
 		fputs("<tr><td>", fp);
 		fputs(filemode(git_tree_entry_filemode(entry)), fp);
 		fprintf(fp, "</td><td><a href=\"%stree/", rel);
-		percentencode(fp, entrypath, strlen(entrypath));
+		percentencodepath(fp, entrypath, strlen(entrypath));
 		fputs(".html\">", fp);
 		xmlencode(fp, entryname, strlen(entryname));
 		fputs("/</a></td><td class=\"num\" align=\"right\"></td></tr>\n", fp);
@@ -1200,10 +1232,10 @@ writefilestree(FILE *fp, git_tree *tree, const char *path, const char *rel)
 			continue;
 		joinpath(entrypath, sizeof(entrypath), path, entryname);
 
-		r = snprintf(filepath, sizeof(filepath), "file/%s.html",
-		         entrypath);
+		outpath(tmp, sizeof(tmp), entrypath, strlen(entrypath));
+		r = snprintf(filepath, sizeof(filepath), "file/%s.html", tmp);
 		if (r < 0 || (size_t)r >= sizeof(filepath))
-			errx(1, "path truncated: 'file/%s.html'", entrypath);
+			errx(1, "path truncated: 'file/%s.html'", tmp);
 
 		if (!git_tree_entry_to_object(&obj, repo, entry)) {
 			switch (git_object_type(obj)) {
@@ -1232,8 +1264,9 @@ writefilestree(FILE *fp, git_tree *tree, const char *path, const char *rel)
 			git_object_free(obj);
 		} else if (git_tree_entry_type(entry) == GIT_OBJ_COMMIT) {
 			/* commit object in tree is a submodule */
-			fprintf(fp, "<tr><td>m---------</td><td><a href=\"%sfile/.gitmodules.html\">",
-				rel);
+			fprintf(fp, "<tr><td>m---------</td><td><a href=\"%sfile/", rel);
+			percentencodepath(fp, ".gitmodules", strlen(".gitmodules"));
+			fputs(".html\">", fp);
 			xmlencode(fp, entryname, strlen(entryname));
 			fputs("</a> @ ", fp);
 			git_oid_tostr(oid, sizeof(oid), git_tree_entry_id(entry));
