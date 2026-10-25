@@ -591,7 +591,8 @@ size_t
 writeblobhtml(FILE *fp, const git_blob *blob)
 {
 	size_t n = 0, i, len, prev;
-	const char *nfmt = "<a href=\"#l%zu\" class=\"line\" id=\"l%zu\">%7zu</a> ";
+	/* style.css draws the number from data-n, so it isn't copied with the code */
+	const char *nfmt = "<a href=\"#l%zu\" class=\"line\" id=\"l%zu\" data-n=\"%zu\"></a>";
 	const char *s = git_blob_rawcontent(blob);
 
 	len = git_blob_rawsize(blob);

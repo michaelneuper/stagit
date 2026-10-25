@@ -167,7 +167,16 @@ pre {
 }
 
 #blob a.line {
+	display: inline-block;
+	width: 7ch;
+	margin-right: 1ch;
+	text-align: right;
 	color: var(--lineno);
+}
+
+/* generated content isn't part of a copied selection */
+#blob a.line::before {
+	content: attr(data-n);
 }
 
 #blob a.line:hover {
