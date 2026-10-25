@@ -11,6 +11,7 @@ mirror of my public GitHub repos. The upstream README is in `README`.
   `README`, which is shown as plain text. Repos without either open on the
   log.
 - stagit-index links to each repo's front page instead of its log.
+- The menu reads README | Files | Log | Refs.
 - cgit-flavoured `style.css`, and my own logo and favicon.
 - The Makefile also finds libraries installed by Homebrew.
 
