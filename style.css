@@ -65,7 +65,7 @@ body > table:first-of-type td {
 
 h1 {
 	margin: 0;
-	font-size: 200%;
+	font-size: 160%;
 	font-weight: normal;
 }
 
@@ -75,7 +75,7 @@ h1 {
 
 /* The index page has a lone description instead of a repo name. */
 .desc:only-child {
-	font-size: 200%;
+	font-size: 160%;
 	color: var(--fg);
 }
 
