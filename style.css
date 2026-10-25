@@ -1,67 +1,140 @@
+/* cgit-flavoured style for stagit's unmodified HTML. */
+
+:root {
+	--fg: #333;
+	--bg: #fff;
+	--muted: #777;
+	--link: #00e;
+	--rule: #ccc;
+	--row: #eee;
+	--target: #ffa;
+	--add: #080;
+	--del: #c00;
+	--hunk: #009;
+	--lineno: #999;
+	--mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--fg: #ccc;
+		--bg: #111;
+		--muted: #888;
+		--link: #6af;
+		--rule: #444;
+		--row: #222;
+		--target: #443;
+		--add: #5c5;
+		--del: #e66;
+		--hunk: #99f;
+		--lineno: #666;
+	}
+}
+
 body {
-	color: #000;
-	background-color: #fff;
-	font-family: monospace;
-}
-
-h1, h2, h3, h4, h5, h6 {
-	font-size: 1em;
 	margin: 0;
+	padding: 4px 8px;
+	font: 10pt sans-serif;
+	color: var(--fg);
+	background: var(--bg);
 }
 
-img, h1, h2 {
-	vertical-align: middle;
+a {
+	color: var(--link);
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:target {
+	background: var(--target);
 }
 
 img {
 	border: 0;
+	vertical-align: middle;
 }
 
-a:target {
-	background-color: #ccc;
+/* Header: logo, name, description, clone URL and menu. */
+
+body > table:first-of-type td {
+	padding: 0.1em 0.4em;
 }
 
-a.d,
-a.h,
-a.i,
-a.line {
-	text-decoration: none;
+h1 {
+	margin: 0;
+	font-size: 200%;
+	font-weight: normal;
 }
 
-#blob a {
-	color: #555;
+.desc {
+	color: var(--muted);
 }
 
-#blob a:hover {
-	color: blue;
-	text-decoration: none;
+/* The index page has a lone description instead of a repo name. */
+.desc:only-child {
+	font-size: 200%;
+	color: var(--fg);
 }
 
-table thead td {
-	font-weight: bold;
+tr.url td {
+	color: var(--muted);
+	overflow-wrap: anywhere;
 }
 
-table td {
+tr.url a {
+	font-family: var(--mono);
+}
+
+hr {
+	border: 0;
+	border-top: 1px solid var(--rule);
+}
+
+body > hr {
+	border-top-width: 3px;
+}
+
+/* Lists: index, log, files, branches and tags. */
+
+#content {
 	padding: 0 0.4em;
+	overflow-x: auto;
 }
 
-#content table td {
+#content table {
+	border-collapse: collapse;
+}
+
+#index,
+#log,
+#files,
+#branches,
+#tags {
+	width: 100%;
+}
+
+#content td {
+	padding: 0.1em 0.5em;
 	vertical-align: top;
 	white-space: nowrap;
 }
 
-#branches tr:hover td,
-#tags tr:hover td,
-#index tr:hover td,
-#log tr:hover td,
-#files tr:hover td {
-	background-color: #eee;
+#content thead td {
+	background: var(--row);
 }
 
-#index tr td:nth-child(2),
-#tags tr td:nth-child(3),
-#branches tr td:nth-child(3),
-#log tr td:nth-child(2) {
+#content tbody tr:hover td {
+	background: var(--row);
+}
+
+#index td:nth-child(2),
+#log td:nth-child(2),
+#branches td:nth-child(3),
+#tags td:nth-child(3) {
+	width: 100%;
 	white-space: normal;
 }
 
@@ -69,86 +142,61 @@ td.num {
 	text-align: right;
 }
 
-.desc {
-	color: #555;
+#log tbody td:nth-child(5) {
+	color: var(--add);
 }
 
-hr {
-	border: 0;
-	border-top: 1px solid #555;
-	height: 1px;
+#log tbody td:nth-child(6) {
+	color: var(--del);
 }
+
+#files td:first-child {
+	font-family: var(--mono);
+	color: var(--muted);
+}
+
+h2 {
+	margin: 1em 0 0.3em;
+	font-size: 110%;
+}
+
+h2:first-child {
+	margin-top: 0.5em;
+}
+
+/* Commits and files. */
 
 pre {
-	font-family: monospace;
+	font: 9pt/1.4 var(--mono);
+}
+
+#blob a.line {
+	color: var(--lineno);
+}
+
+#blob a.line:hover {
+	color: var(--link);
+	text-decoration: none;
+}
+
+pre a.h,
+pre a.i,
+pre a.d {
+	text-decoration: none;
 }
 
 pre a.h {
-	color: #00a;
+	color: var(--hunk);
 }
 
 .A,
 span.i,
 pre a.i {
-	color: #070;
+	color: var(--add);
 }
 
 .D,
 span.d,
 pre a.d {
-	color: #e00;
-}
-
-pre a.h:hover,
-pre a.i:hover,
-pre a.d:hover {
-	text-decoration: none;
-}
-
-@media (prefers-color-scheme: dark) {
-	body {
-		background-color: #000;
-		color: #bdbdbd;
-	}
-	hr {
-		border-color: #222;
-	}
-	a {
-		color: #56c8ff;
-	}
-	a:target {
-		background-color: #222;
-	}
-	.desc {
-		color: #aaa;
-	}
-	#blob a {
-		color: #555;
-	}
-	#blob a:target {
-		color: #eee;
-	}
-	#blob a:hover {
-		color: #56c8ff;
-	}
-	pre a.h {
-		color: #00cdcd;
-	}
-	.A,
-	span.i,
-	pre a.i {
-		color: #00cd00;
-	}
-	.D,
-	span.d,
-	pre a.d {
-		color: #cd0000;
-	}
-	#branches tr:hover td,
-	#tags tr:hover td,
-	#index tr:hover td,
-	#log tr:hover td,
-	#files tr:hover td {
-		background-color: #111;
-	}
+	color: var(--del);
 }
