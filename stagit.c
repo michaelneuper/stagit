@@ -71,7 +71,7 @@ static char cloneurl[1024];
 static char *submodules;
 static char *licensefiles[] = { "HEAD:LICENSE", "HEAD:LICENSE.md", "HEAD:LICENSE.txt", "HEAD:COPYING" };
 static char *license;
-static char *readmefiles[] = { "HEAD:README.md", "HEAD:README" };
+static char *readmefiles[] = { "HEAD:README.md", "HEAD:README.org", "HEAD:README" };
 static char *readme;
 static long long nlogcommits = -1; /* -1 indicates not used */
 
@@ -1143,14 +1143,76 @@ writereadmehtml(FILE *fp, const char *s)
 	fputs(s, fp);
 }
 
+char *
+markdownhtml(const char *s, size_t len)
+{
+	char *html = NULL;
+	size_t htmllen;
+	FILE *htmlfp;
+
+	if (!(htmlfp = open_memstream(&html, &htmllen)))
+		err(1, "open_memstream");
+	if (md_html(s, len, writemarkdown, htmlfp, MD_DIALECT_GITHUB, 0))
+		errx(1, "md_html: '%s'", readme);
+	if (fclose(htmlfp))
+		err(1, "fclose: '%s'", readme);
+
+	return html;
+}
+
+/* README.org converted by pandoc, or NULL if that fails, for example
+ * because pandoc is not installed */
+char *
+orghtml(const char *s, size_t len)
+{
+	char tmppath[] = "/tmp/stagit.XXXXXX", cmd[128], buf[BUFSIZ];
+	char *html = NULL, *body, *end;
+	size_t n, htmllen;
+	FILE *tmpfp, *pp, *htmlfp;
+	int fd, status;
+
+	if ((fd = mkstemp(tmppath)) < 0)
+		err(1, "mkstemp");
+	if (!(tmpfp = fdopen(fd, "w")))
+		err(1, "fdopen: '%s'", tmppath);
+	fwrite(s, 1, len, tmpfp);
+	checkfileerror(tmpfp, tmppath, 'w');
+	fclose(tmpfp);
+
+	/* a standalone document keeps #+title; only its body is used */
+	snprintf(cmd, sizeof(cmd),
+	         "pandoc -f org -t html5 -s -M pagetitle=README '%s'", tmppath);
+	if (!(pp = popen(cmd, "r")))
+		err(1, "popen");
+	if (!(htmlfp = open_memstream(&html, &htmllen)))
+		err(1, "open_memstream");
+	while ((n = fread(buf, 1, sizeof(buf), pp)) > 0)
+		fwrite(buf, 1, n, htmlfp);
+	status = pclose(pp);
+	if (fclose(htmlfp))
+		err(1, "fclose: '%s'", readme);
+	unlink(tmppath);
+
+	if (status || !(body = strstr(html, "<body>")) ||
+	    !(end = strstr(body, "</body>"))) {
+		warnx("pandoc failed for '%s', showing it as plain text", readme);
+		free(html);
+		return NULL;
+	}
+	body += strlen("<body>");
+	memmove(html, body, end - body);
+	html[end - body] = '\0';
+
+	return html;
+}
+
 void
 writereadme(FILE *fp)
 {
 	git_object *obj = NULL;
 	char spec[PATH_MAX], *html = NULL;
 	const char *s, *ext;
-	size_t len, htmllen;
-	FILE *htmlfp;
+	size_t len;
 
 	snprintf(spec, sizeof(spec), "HEAD:%s", readme);
 	if (git_revparse_single(&obj, repo, spec))
@@ -1158,15 +1220,14 @@ writereadme(FILE *fp)
 	s = git_blob_rawcontent((git_blob *)obj);
 	len = git_blob_rawsize((git_blob *)obj);
 
+	/* rendered to memory first, to rewrite links and image sources */
+	if ((ext = strrchr(readme, '.')) && !strcmp(ext, ".md"))
+		html = markdownhtml(s, len);
+	else if (ext && !strcmp(ext, ".org"))
+		html = orghtml(s, len);
+
 	fputs("<div id=\"readme\">\n", fp);
-	if ((ext = strrchr(readme, '.')) && !strcmp(ext, ".md")) {
-		/* render to memory first, to rewrite image sources */
-		if (!(htmlfp = open_memstream(&html, &htmllen)))
-			err(1, "open_memstream");
-		if (md_html(s, len, writemarkdown, htmlfp, MD_DIALECT_GITHUB, 0))
-			errx(1, "md_html: '%s'", readme);
-		if (fclose(htmlfp))
-			err(1, "fclose: '%s'", readme);
+	if (html) {
 		writereadmehtml(fp, html);
 		free(html);
 	} else {

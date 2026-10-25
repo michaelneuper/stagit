@@ -6,10 +6,11 @@ mirror of my public GitHub repos. The upstream README is in `README`.
 
 ## Changes from upstream
 
-- Each repo opens on its README (`index.html`), with markdown rendered by
-  [md4c](https://github.com/mity/md4c). `README.md` is preferred over
-  `README`, which is shown as plain text. Repos without either open on the
-  log.
+- Each repo opens on its README (`index.html`). `README.md` is rendered by
+  [md4c](https://github.com/mity/md4c) and `README.org` by
+  [pandoc](https://pandoc.org); a plain `README`, or a `README.org` when
+  pandoc isn't installed, is shown as plain text. They're looked for in that
+  order, and repos without one open on the log.
 - stagit-index links to each repo's front page instead of its log.
 - The menu reads README | Files | Log | Refs.
 - Files are browsed by directory: `files.html` lists the top level, each
@@ -25,7 +26,8 @@ To see only the code changes: `git diff 1.3 -- '*.c' Makefile`.
 
 ## Building the site
 
-Needs libgit2, md4c and the GitHub CLI (`brew install libgit2 md4c gh`).
+Needs libgit2, md4c, pandoc and the GitHub CLI
+(`brew install libgit2 md4c pandoc gh`).
 
     ./build.sh
     python3 -m http.server -d public

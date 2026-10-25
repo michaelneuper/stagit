@@ -289,3 +289,9 @@ pre a.d {
 #readme th {
 	background: var(--row);
 }
+
+/* checklists: ul.task-list from pandoc, li.task-list-item from md4c */
+#readme .task-list,
+#readme .task-list-item {
+	list-style: none;
+}
