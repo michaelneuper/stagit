@@ -200,3 +200,86 @@ span.d,
 pre a.d {
 	color: var(--del);
 }
+
+/* README front page. */
+
+#readme {
+	max-width: 60em;
+	line-height: 1.5;
+}
+
+#readme h1,
+#readme h2,
+#readme h3,
+#readme h4 {
+	margin: 1.2em 0 0.5em;
+	font-weight: bold;
+	line-height: 1.25;
+}
+
+#readme h1:first-child,
+#readme h2:first-child {
+	margin-top: 0.5em;
+}
+
+#readme h1,
+#readme h2 {
+	padding-bottom: 0.2em;
+	border-bottom: 1px solid var(--rule);
+}
+
+#readme h1 {
+	font-size: 160%;
+}
+
+#readme h2 {
+	font-size: 130%;
+}
+
+#readme h3 {
+	font-size: 115%;
+}
+
+#readme h4 {
+	font-size: 100%;
+}
+
+#readme code {
+	padding: 0.1em 0.3em;
+	font: 9pt var(--mono);
+	background: var(--row);
+}
+
+#readme pre {
+	padding: 0.6em 0.8em;
+	overflow-x: auto;
+	background: var(--row);
+}
+
+#readme pre code {
+	padding: 0;
+	font: inherit;
+	background: none;
+}
+
+#readme img {
+	max-width: 100%;
+}
+
+#readme blockquote {
+	margin: 0;
+	padding: 0 1em;
+	color: var(--muted);
+	border-left: 3px solid var(--rule);
+}
+
+#readme th,
+#readme td {
+	padding: 0.2em 0.6em;
+	white-space: normal;
+	border: 1px solid var(--rule);
+}
+
+#readme th {
+	background: var(--row);
+}

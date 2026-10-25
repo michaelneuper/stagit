@@ -6,6 +6,11 @@ mirror of my public GitHub repos. The upstream README is in `README`.
 
 ## Changes from upstream
 
+- Each repo opens on its README (`index.html`), with markdown rendered by
+  [md4c](https://github.com/mity/md4c). `README.md` is preferred over
+  `README`, which is shown as plain text. Repos without either open on the
+  log.
+- stagit-index links to each repo's front page instead of its log.
 - cgit-flavoured `style.css`, and my own logo and favicon.
 - The Makefile also finds libraries installed by Homebrew.
 
@@ -13,7 +18,7 @@ To see only the code changes: `git diff 1.3 -- '*.c' Makefile`.
 
 ## Building the site
 
-Needs libgit2 and the GitHub CLI (`brew install libgit2 gh`).
+Needs libgit2, md4c and the GitHub CLI (`brew install libgit2 md4c gh`).
 
     ./build.sh
     python3 -m http.server -d public
@@ -78,3 +83,5 @@ Merge rather than rebase, so `main` never needs a force push. Conflicts in
   existing commit page, so incremental output would go stale after a force
   push or a description change. Netlify only uploads files whose contents
   changed, so redeploys stay small.
+- Relative image links in READMEs don't work, because stagit only publishes
+  HTML views of files, not the files themselves.

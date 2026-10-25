@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <git2.h>
+#include <md4c-html.h>
 
 #include "compat.h"
 
@@ -69,7 +70,7 @@ static char cloneurl[1024];
 static char *submodules;
 static char *licensefiles[] = { "HEAD:LICENSE", "HEAD:LICENSE.md", "HEAD:LICENSE.txt", "HEAD:COPYING" };
 static char *license;
-static char *readmefiles[] = { "HEAD:README", "HEAD:README.md" };
+static char *readmefiles[] = { "HEAD:README.md", "HEAD:README" };
 static char *readme;
 static long long nlogcommits = -1; /* -1 indicates not used */
 
@@ -535,15 +536,14 @@ writeheader(FILE *fp, const char *title)
 		fputs("</a></td></tr>", fp);
 	}
 	fputs("<tr><td></td><td>\n", fp);
+	if (readme)
+		fprintf(fp, "<a href=\"%sindex.html\">README</a> | ", relpath);
 	fprintf(fp, "<a href=\"%slog.html\">Log</a> | ", relpath);
 	fprintf(fp, "<a href=\"%sfiles.html\">Files</a> | ", relpath);
 	fprintf(fp, "<a href=\"%srefs.html\">Refs</a>", relpath);
 	if (submodules)
 		fprintf(fp, " | <a href=\"%sfile/%s.html\">Submodules</a>",
 		        relpath, submodules);
-	if (readme)
-		fprintf(fp, " | <a href=\"%sfile/%s.html\">README</a>",
-		        relpath, readme);
 	if (license)
 		fprintf(fp, " | <a href=\"%sfile/%s.html\">LICENSE</a>",
 		        relpath, license);
@@ -946,6 +946,40 @@ writeatom(FILE *fp, int all)
 	return 0;
 }
 
+void
+writemarkdown(const MD_CHAR *s, MD_SIZE len, void *fp)
+{
+	fwrite(s, 1, len, fp);
+}
+
+void
+writereadme(FILE *fp)
+{
+	git_object *obj = NULL;
+	char spec[PATH_MAX];
+	const char *s, *ext;
+	size_t len;
+
+	snprintf(spec, sizeof(spec), "HEAD:%s", readme);
+	if (git_revparse_single(&obj, repo, spec))
+		return;
+	s = git_blob_rawcontent((git_blob *)obj);
+	len = git_blob_rawsize((git_blob *)obj);
+
+	fputs("<div id=\"readme\">\n", fp);
+	if ((ext = strrchr(readme, '.')) && !strcmp(ext, ".md")) {
+		if (md_html(s, len, writemarkdown, fp, MD_DIALECT_GITHUB, 0))
+			errx(1, "md_html: '%s'", readme);
+	} else {
+		fputs("<pre>", fp);
+		xmlencode(fp, s, len);
+		fputs("</pre>\n", fp);
+	}
+	fputs("</div>\n", fp);
+
+	git_object_free(obj);
+}
+
 size_t
 writeblob(git_object *obj, const char *fpath, const char *filename, size_t filesize)
 {
@@ -1325,6 +1359,17 @@ main(int argc, char *argv[])
 	    git_object_type(obj) == GIT_OBJ_BLOB)
 		submodules = ".gitmodules";
 	git_object_free(obj);
+
+	/* README for HEAD as the front page */
+	if (readme) {
+		fp = efopen("index.html", "w");
+		relpath = "";
+		writeheader(fp, "");
+		writereadme(fp);
+		writefooter(fp);
+		checkfileerror(fp, "index.html", 'w');
+		fclose(fp);
+	}
 
 	/* log for HEAD */
 	fp = efopen("log.html", "w");

@@ -11,6 +11,7 @@ DOCPREFIX = ${PREFIX}/share/doc/${NAME}
 # /opt/homebrew is Homebrew on Apple silicon.
 LIBGIT_INC = -I/usr/local/include -I/opt/homebrew/include
 LIBGIT_LIB = -L/usr/local/lib -L/opt/homebrew/lib -lgit2
+MD4C_LIB = -lmd4c-html
 
 # use system flags.
 STAGIT_CFLAGS = ${LIBGIT_INC} ${CFLAGS}
@@ -69,7 +70,7 @@ dist:
 ${OBJ}: ${HDR}
 
 stagit: stagit.o ${COMPATOBJ}
-	${CC} -o $@ stagit.o ${COMPATOBJ} ${STAGIT_LDFLAGS}
+	${CC} -o $@ stagit.o ${COMPATOBJ} ${STAGIT_LDFLAGS} ${MD4C_LIB}
 
 stagit-index: stagit-index.o ${COMPATOBJ}
 	${CC} -o $@ stagit-index.o ${COMPATOBJ} ${STAGIT_LDFLAGS}
