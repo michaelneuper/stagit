@@ -1,0 +1,13 @@
+// Serves the site that build.sh writes to public. Deployed by
+// .github/workflows/mirror.yml.
+{
+	"name": "stagit",
+	"compatibility_date": "2026-10-01",
+	"assets": {
+		"directory": "public",
+		"not_found_handling": "404-page"
+	},
+	"routes": [
+		{ "pattern": "git.michaelneuper.com", "custom_domain": true }
+	]
+}

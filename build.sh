@@ -30,7 +30,8 @@ mkdir -p "$work/repos"
 rm -rf "$out"
 mkdir -p "$out"
 copyassets "$out"
-# Served by Netlify for any missing page, so its links are absolute.
+# Served for any missing page (not_found_handling in wrangler.jsonc), so its
+# links are absolute.
 cp "$root/404.html" "$out/"
 
 # One line per non-empty, public, non-fork repo: name, default branch,

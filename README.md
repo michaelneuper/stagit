@@ -11,6 +11,10 @@ mirror of my public GitHub repos. The upstream README is in `README`.
   [pandoc](https://pandoc.org); a plain `README`, or a `README.org` when
   pandoc isn't installed, is shown as plain text. They're looked for in that
   order, and repos without one open on the log.
+- Relative links and images in a README resolve from the repo root, like on
+  GitHub. Links to text files go to their file page and links to directories
+  to their listing. Images and other binary files are copied to
+  `raw/<path>` and linked there.
 - stagit-index links to each repo's front page instead of its log.
 - The menu reads README | Files | Log | Refs.
 - Files are browsed by directory: `files.html` lists the top level, each
@@ -19,7 +23,10 @@ mirror of my public GitHub repos. The upstream README is in `README`.
 - cgit-flavoured `style.css`, and my own logo and favicon.
 - The Makefile also finds libraries installed by Homebrew.
 
-To see only the code changes: `git diff 1.3 -- '*.c' Makefile`.
+The fork is based on stagit 1.3, and upstream releases are merged in rather
+than rebased onto. To see only the code changes:
+`git diff 1.3 -- '*.c' Makefile`. Upstream is only reachable over the git
+protocol, at `git://git.codemadness.org/stagit`.
 
 ## Building the site
 
@@ -39,58 +46,41 @@ skipped. Environment variables:
 - `SITE_URL`: public URL with trailing slash, used to make the Atom feed
   links absolute.
 - `SERVE_GIT=1`: also publish the bare repos, so that
-  `git clone https://git.michaelneuper.com/<repo>.git` works over git's dumb
-  HTTP protocol. It's off in the workflow because the website repo's
-  packfile is over 100 MB, and Netlify doesn't handle files that large well.
+  `git clone <SITE_URL><repo>.git` works over git's dumb HTTP protocol. It's
+  off for git.michaelneuper.com because one of the repos has a packfile over
+  100 MB, and Cloudflare doesn't serve static files over 25 MiB.
 
-To try a change on a single repo without a full build:
+stagit writes into the current directory, so to render a single repo
+without a full build:
 
     make
     mkdir -p /tmp/out && cd /tmp/out
-    ~/Developer/stagit/stagit ~/Developer/stagit/work/repos/cube.git
+    path/to/stagit/stagit path/to/stagit/work/repos/<repo>.git
 
 ## Deploying
 
-`.github/workflows/mirror.yml` builds the site and deploys it to Netlify on
-every push to `main`, every 6 hours, and on demand. One-time setup:
+`.github/workflows/mirror.yml` rebuilds the site on every push to `main`,
+every 6 hours, and on demand, then deploys `public` to Cloudflare as a
+Worker with static assets, configured in `wrangler.jsonc`. Every run
+regenerates the site from scratch: stagit never rewrites an existing commit
+page, so incremental output would go stale after a force push or a
+description change. wrangler only uploads files whose contents changed, so
+redeploys stay small.
 
-1. Create an empty Netlify project and note the project ID it prints:
+The workflow mirrors the repos of whoever owns the GitHub repo it runs in.
+To deploy your own copy:
 
-       npx netlify-cli login
-       npx netlify-cli sites:create --name <name> --disable-linking
+1. Put your hostname in `wrangler.jsonc` and `SITE_URL` in the workflow,
+   and list any repos to skip in `exclude`. The domain must be a Cloudflare
+   zone. The first deploy points the hostname at the Worker, replacing any
+   existing DNS record for it, and sets up HTTPS.
+2. Create a Cloudflare API token from the "Edit Cloudflare Workers"
+   template, and add it and your account ID as repository secrets:
 
-2. In the Netlify UI, open the project's domain management and add
-   `git.michaelneuper.com`. michaelneuper.com is on Netlify DNS, so the
-   record and HTTPS certificate are set up automatically.
-3. Create a personal access token under User settings → Applications.
-4. Push this repo to GitHub and add both as secrets:
+       gh secret set CLOUDFLARE_API_TOKEN
+       gh secret set CLOUDFLARE_ACCOUNT_ID
 
-       gh secret set NETLIFY_AUTH_TOKEN
-       gh secret set NETLIFY_SITE_ID
-
-5. Run the workflow from the Actions tab, or push to `main`.
+3. Push to `main`, or run the workflow from the Actions tab.
 
 GitHub disables scheduled workflows in public repos after 60 days without
-activity in the repo. That doesn't apply if the repo is private.
-
-## Updating from upstream
-
-Upstream is only reachable over the git protocol:
-
-    git remote add upstream git://git.codemadness.org/stagit
-    git fetch upstream --tags
-    git merge <new tag>
-
-Merge rather than rebase, so `main` never needs a force push. Conflicts in
-`style.css`, `logo.png` and `favicon.png` resolve to ours.
-
-## Notes
-
-- Every run regenerates the site from scratch. stagit never rewrites an
-  existing commit page, so incremental output would go stale after a force
-  push or a description change. Netlify only uploads files whose contents
-  changed, so redeploys stay small.
-- Relative links and images in a README resolve from the repo root, like on
-  GitHub. Links to text files go to their file page and links to directories
-  to their listing. Images and other binary files are copied to
-  `raw/<path>` and linked there.
+activity in the repo.
