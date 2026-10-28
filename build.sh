@@ -89,6 +89,14 @@ while IFS=$us read -r name branch lang desc <&3; do
 	)
 
 	if [ "$serve_git" = 1 ]; then
+		# Cloudflare doesn't serve files over 25 MiB, so split the
+		# objects into packs of at most 20 MiB. Split packs can't have
+		# a bitmap, and dumb HTTP doesn't use one. Recomputing deltas
+		# on one thread makes the packs depend only on the objects,
+		# not on the pack GitHub sent, so unchanged repos don't get
+		# uploaded again.
+		git -C "$repo" -c pack.threads=1 repack -q -a -d -f \
+			--max-pack-size=20m --no-write-bitmap-index
 		git -C "$repo" update-server-info
 		cp -R "$repo" "$out/$name.git"
 	fi

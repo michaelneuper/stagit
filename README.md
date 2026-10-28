@@ -46,9 +46,11 @@ skipped. Environment variables:
 - `SITE_URL`: public URL with trailing slash, used to make the Atom feed
   links absolute.
 - `SERVE_GIT=1`: also publish the bare repos, so that
-  `git clone <SITE_URL><repo>.git` works over git's dumb HTTP protocol. It's
-  off for git.michaelneuper.com because one of the repos has a packfile over
-  100 MB, and Cloudflare doesn't serve static files over 25 MiB.
+  `git clone <SITE_URL><repo>.git` works over git's dumb HTTP protocol, and
+  use that as the clone URL on the repo pages. Each repo is first repacked
+  into packs of at most 20 MiB, because Cloudflare doesn't serve files over
+  25 MiB. A single file over 25 MiB can't be split, so a repo with one
+  fails the deploy. The workflow sets it.
 
 stagit writes into the current directory, so to render a single repo
 without a full build:
@@ -72,8 +74,8 @@ To deploy your own copy:
 
 1. Put your hostname in `wrangler.jsonc` and `SITE_URL` in the workflow,
    and list any repos to skip in `exclude`. The domain must be a Cloudflare
-   zone. The first deploy points the hostname at the Worker, replacing any
-   existing DNS record for it, and sets up HTTPS.
+   zone without DNS records for that hostname: the deploy creates its own
+   record and HTTPS certificate, but fails if another record is in the way.
 2. Create a Cloudflare API token from the "Edit Cloudflare Workers"
    template, and add it and your account ID as repository secrets:
 
