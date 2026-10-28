@@ -16,9 +16,6 @@ mirror of my public GitHub repos. The upstream README is in `README`.
 - Files are browsed by directory: `files.html` lists the top level, each
   directory gets a page at `tree/<path>.html`, and file and directory pages
   start with a linked path.
-- Path components that start with a dot get a `_` prefix in output paths
-  (`file/_.gitignore.html`), because netlify-cli skips dotfiles when
-  deploying. Names are still shown with the dot.
 - cgit-flavoured `style.css`, and my own logo and favicon.
 - The Makefile also finds libraries installed by Homebrew.
 
