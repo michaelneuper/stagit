@@ -1,0 +1,20 @@
+// Starts .github/workflows/mirror.yml on a schedule. This is its own Worker
+// because a script in the site's Worker would get every request that matches
+// no file, instead of those getting the 404 page.
+{
+	"name": "stagit-cron",
+	"main": "index.js",
+	"compatibility_date": "2026-10-01",
+	"workers_dev": false,
+	"preview_urls": false,
+	"triggers": {
+		"crons": ["23 */6 * * *"]
+	},
+	// GITHUB_TOKEN is a secret, set in the dashboard.
+	"vars": {
+		"GITHUB_REPO": "michaelneuper/stagit"
+	},
+	"observability": {
+		"enabled": true
+	}
+}

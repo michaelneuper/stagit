@@ -63,19 +63,24 @@ without a full build:
 
 `.github/workflows/mirror.yml` rebuilds the site on every push to `main`,
 every 6 hours, and on demand, then deploys `public` to Cloudflare as a
-Worker with static assets, configured in `wrangler.jsonc`. Every run
-regenerates the site from scratch: stagit never rewrites an existing commit
-page, so incremental output would go stale after a force push or a
-description change. wrangler only uploads files whose contents changed, so
-redeploys stay small.
+Worker with static assets, configured in `wrangler.jsonc`. The 6-hourly
+runs are started by a second Worker with a cron trigger (`cron/`), since
+GitHub disables scheduled workflows in public repos after 60 days without
+commits.
+
+Every run regenerates the site from scratch: stagit never rewrites an
+existing commit page, so incremental output would go stale after a force
+push or a description change. wrangler only uploads files whose contents
+changed, so redeploys stay small.
 
 The workflow mirrors the repos of whoever owns the GitHub repo it runs in.
 To deploy your own copy:
 
-1. Put your hostname in `wrangler.jsonc` and `SITE_URL` in the workflow,
-   and list any repos to skip in `exclude`. The domain must be a Cloudflare
-   zone without DNS records for that hostname: the deploy creates its own
-   record and HTTPS certificate, but fails if another record is in the way.
+1. Put your hostname in `wrangler.jsonc`, your GitHub repo in
+   `cron/wrangler.jsonc` and `SITE_URL` in the workflow, and list any repos
+   to skip in `exclude`. The domain must be a Cloudflare zone without DNS
+   records for that hostname: the deploy creates its own record and HTTPS
+   certificate, but fails if another record is in the way.
 2. Create a Cloudflare API token from the "Edit Cloudflare Workers"
    template, and add it and your account ID as repository secrets:
 
@@ -83,6 +88,7 @@ To deploy your own copy:
        gh secret set CLOUDFLARE_ACCOUNT_ID
 
 3. Push to `main`, or run the workflow from the Actions tab.
-
-GitHub disables scheduled workflows in public repos after 60 days without
-activity in the repo.
+4. Create a fine-grained GitHub token for this repo only, with "Actions"
+   set to read and write. In the Cloudflare dashboard, add it to the
+   `stagit-cron` Worker under Settings → Variables and Secrets, as a
+   secret named `GITHUB_TOKEN`.
