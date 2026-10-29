@@ -30,6 +30,8 @@ mkdir -p "$work/repos"
 rm -rf "$out"
 mkdir -p "$out"
 copyassets "$out"
+# Browsers, iPhones and crawlers ask for these at the root whatever the pages link.
+cp "$root/favicon.ico" "$root/apple-touch-icon.png" "$root/apple-touch-icon-precomposed.png" "$out"
 # Served for any missing page (not_found_handling in wrangler.jsonc), so its
 # links are absolute.
 cp "$root/404.html" "$out/"
