@@ -101,6 +101,11 @@ while IFS=$us read -r name branch lang desc <&3; do
 			--max-pack-size=20m --no-write-bitmap-index
 		git -C "$repo" update-server-info
 		cp -R "$repo" "$out/$name.git"
+		# Git fails on a 404 for these, and libcurl 8.7.1 (macOS's)
+		# then corrupts the HTTP/2 connection, so the clone can't
+		# find its packs. A blank line lists no alternates.
+		echo > "$out/$name.git/objects/info/http-alternates"
+		echo > "$out/$name.git/objects/info/alternates"
 	fi
 
 	echo "$(git -C "$repo" log -1 --format=%ct) $repo" >> "$work/index.lst"
