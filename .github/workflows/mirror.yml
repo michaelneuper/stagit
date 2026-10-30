@@ -6,6 +6,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      trigger:
+        description: What started the run, for the deployment message
+        type: choice
+        options: [manual, scheduled]
+        default: manual
 
 permissions:
   contents: read
@@ -17,6 +23,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      SITE_URL: https://git.michaelneuper.com/
     steps:
       - uses: actions/checkout@v7
 
@@ -41,7 +49,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_USER: ${{ github.repository_owner }}
-          SITE_URL: https://git.michaelneuper.com/
           SERVE_GIT: 1
 
       # wrangler needs Node 22 or newer.
@@ -49,15 +56,40 @@ jobs:
         with:
           node-version: "22"
 
-      # Reads wrangler.jsonc.
+      # Reads wrangler.jsonc. The message, shown in the dashboard's
+      # deployment list, is the commit's subject for a push. Other runs
+      # name the repos whose refs differ from the live site's, or count
+      # them when the list gets long.
       - name: Deploy to Cloudflare
-        run: npx --yes wrangler@4.151.3 deploy
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            message=$(git log -1 --format=%s)
+          else
+            changed= n=0
+            for refs in public/*.git/info/refs; do
+              name=${refs#public/}
+              name=${name%.git/info/refs}
+              if ! curl -fs "$SITE_URL$name.git/info/refs" | cmp -s - "$refs"; then
+                changed="$changed, $name"
+                n=$((n + 1))
+              fi
+            done
+            changed=${changed#, }
+            message="$TRIGGER mirror: ${changed:-no changes}"
+            if [ ${#message} -gt 100 ]; then
+              message="$TRIGGER mirror: $n repos changed"
+            fi
+          fi
+          npx --yes wrangler@4.151.3 deploy --message "$message"
         env:
+          TRIGGER: ${{ inputs.trigger }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # Skipped on scheduled runs, which would only add identical versions.
       - name: Deploy the schedule
-        run: npx --yes wrangler@4.151.3 deploy -c cron/wrangler.jsonc
+        if: inputs.trigger != 'scheduled'
+        run: npx --yes wrangler@4.151.3 deploy -c cron/wrangler.jsonc --message "$(git log -1 --format=%s)"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

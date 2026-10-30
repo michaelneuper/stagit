@@ -11,7 +11,7 @@ export default {
 					"User-Agent": "stagit-cron",
 					"X-GitHub-Api-Version": "2022-11-28",
 				},
-				body: JSON.stringify({ ref: "main" }),
+				body: JSON.stringify({ ref: "main", inputs: { trigger: "scheduled" } }),
 			},
 		);
 		if (!res.ok)
